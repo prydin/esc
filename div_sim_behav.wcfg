@@ -11,15 +11,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="357.610 ns"></ZoomStartTime>
-      <ZoomEndTime time="522.291 ns"></ZoomEndTime>
+      <ZoomStartTime time="0.000 ns"></ZoomStartTime>
+      <ZoomEndTime time="181.802 ns"></ZoomEndTime>
       <Cursor1Time time="1,000.000 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="176"></NameColumnWidth>
+      <NameColumnWidth column_width="172"></NameColumnWidth>
       <ValueColumnWidth column_width="58"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="8" />
+   <WVObjectSize size="10" />
    <wvobject fp_name="/zero_detect_sim/clk" type="logic">
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
@@ -53,5 +53,13 @@
    <wvobject fp_name="/zero_detect_sim/zero_detect/neg_edge" type="logic">
       <obj_property name="ElementShortName">neg_edge</obj_property>
       <obj_property name="ObjectShortName">neg_edge</obj_property>
+   </wvobject>
+   <wvobject fp_name="/zero_detect_sim/zero_detect/do_increment" type="logic">
+      <obj_property name="ElementShortName">do_increment</obj_property>
+      <obj_property name="ObjectShortName">do_increment</obj_property>
+   </wvobject>
+   <wvobject fp_name="/zero_detect_sim/zero_detect/do_decrement" type="logic">
+      <obj_property name="ElementShortName">do_decrement</obj_property>
+      <obj_property name="ObjectShortName">do_decrement</obj_property>
    </wvobject>
 </wave_config>

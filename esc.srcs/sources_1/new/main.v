@@ -31,6 +31,7 @@ module esc(
     input pio7,             // U zero sense
     input pio8,             // V zero sense
     input pio9,             // W zero sense
+    output pio16,           // Cleaned U sense (for debug)
     input vauxp5,           // Power control pos
     input vauxn5            // Power control neg
     );
@@ -45,12 +46,16 @@ module esc(
     wire u_zero = pio7;
     wire v_zero = pio8;
     wire w_zero = pio9;
+    wire u_zero_cleaned = pio16; // For debug
     
     // Master 200MHz clock
     wire master_clk;
     
     // Slow clock (1MHz)
     wire slow_clk;
+    
+    // 100kHz sense clock
+    wire sense_clk;
     
     // Clock locked flag (not used)
     wire locked;
@@ -62,13 +67,19 @@ module esc(
     // Pulse generator parameters
     reg [9:0] duty_cycle;
     
-    // Create 200MHz and 1MHz clocks
+    // Create 200MHz and 10MHz clocks
     clk_wiz_0 clock (
         .clk_out1(master_clk),
         .clk_out2(slow_clk),
         .reset(0),               // TODO: Implement reset
         .locked(locked),
         .clk_in1(clk));
+        
+    // Generate a 100kHz clock based on the 10MHz slow_clk
+    clock_divider #(
+        DIVISOR(100)) clock_divider (
+        .clk_in(slow_clk),
+        .clk_out(sense_clock));
         
     // ADC for the speed knob
     xadc_0 speed_knob (
@@ -130,7 +141,34 @@ module esc(
             blink_count <= blink_count - 1;
         end
     end 
+    
+    // Test of zero crossing detection. Move to esc pulse generator
+    zero_detect #(
+        .WINDOW_SIZE(20),
+        .THRESHOLD(14)) (
+        .clk(sample_clk),
+        .in(u_zero),
+        .out(u_zero_cleaned)); 
 
+endmodule
+
+module clock_divider #(
+    DIVISOR = 1) (
+        input clk_in,
+        output reg clk_out);
+    
+    reg [$clog2(DIVISOR) - 1:0] counter = 0;
+    
+    always @(posedge clk_in) 
+    begin
+        counter <= counter + 1;
+        if(counter == DIVISOR) 
+        begin
+            clk_out <= ~clk_out;
+            counter = 0;
+        end
+    end
+    
 endmodule
 
 module zero_detect #(
@@ -150,7 +188,6 @@ module zero_detect #(
     reg [WINDOW_SIZE - 1:0] fifo = 0; 
     reg [COUNTER_SIZE:0] ones = 0;
     wire [COUNTER_SIZE:0] zeroes = WINDOW_SIZE - ones;
-    reg state = 0;
     
     // Determine increment/decrement action depending on incoming and outgoing bit
     wire do_increment = in == 1 && fifo[WINDOW_SIZE - 1:WINDOW_SIZE - 1] == 0;
@@ -173,7 +210,7 @@ module zero_detect #(
             pos_edge <= 0;
             
             // Negative crossing?
-            if(zeroes > THRESHOLD)
+            if(zeroes >= THRESHOLD)
             begin
                 state <= LOW;
                 neg_edge <= 1;
@@ -183,7 +220,7 @@ module zero_detect #(
             neg_edge <= 0;
             
             // Positive crossing?
-            if(ones > THRESHOLD)
+            if(ones >= THRESHOLD)
             begin
                 state <= HIGH;
                 pos_edge <= 1;

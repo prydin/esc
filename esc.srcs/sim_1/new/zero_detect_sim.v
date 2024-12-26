@@ -67,6 +67,8 @@ module zero_detect_sim();
 			#4
 			sense <= 1;
 		end
+		
+		sense <= 0;
  
     end
 endmodule
