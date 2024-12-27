@@ -148,6 +148,7 @@ module esc(
         .HIGH_THRESHOLD(150),
         .LOW_THRESHOLD(100)) zero_detect (
         .clk(slow_clk),
+        .enable(1),
         .reset(0), // TODO: Add reset logic
         .in(u_zero),
         .pos_edge(u_zero_cleaned)); 
@@ -177,6 +178,7 @@ module ones_counter #(
     parameter PERIOD = 1) (
     input clk, 
     input reset,
+    input enable,
     input start,
     input signal_in,
     output reg ready,
@@ -187,10 +189,11 @@ module ones_counter #(
  
     always @(posedge clk) 
     begin
-        if(reset) 
+        if(reset || !enable) 
         begin
             internal_count <= 0;
             period <= 0;
+            ready <= 0;
         end else 
         begin
             if(start)
@@ -221,6 +224,7 @@ module zero_detect #(
     parameter LOW_THRESHOLD = 30) (
     input clk,
     input reset,
+    input enable, 
     input in,
     output reg pos_edge = 0,
     output reg neg_edge = 0);
@@ -239,6 +243,7 @@ module zero_detect #(
         .PERIOD(WINDOW_SIZE)) ones_counter (
         .clk(clk),
         .reset(reset),
+        .enable(enable),
         .start(trigger),
         .signal_in(in),
         .ready(ready),
@@ -250,31 +255,34 @@ module zero_detect #(
         begin
             trigger <= 1;
         end
-        if(ready) 
-        begin 
-            if(ones > HIGH_THRESHOLD && state == LOW) 
-            begin
-                state <= HIGH;
-                pos_edge <= 1;
+        if(enable) 
+        begin
+            if(ready) 
+            begin 
+                if(ones > HIGH_THRESHOLD && state == LOW) 
+                begin
+                    state <= HIGH;
+                    pos_edge <= 1;
+                end else
+                begin
+                    pos_edge <= 0;
+                end
+                
+                if(ones < LOW_THRESHOLD && state == HIGH) 
+                begin
+                    state <= LOW;
+                    neg_edge <= 1;
+                end else 
+                begin
+                    neg_edge <= 0;
+                end
+                trigger <= 1;
             end else
             begin
-                pos_edge <= 0;
-            end
-            
-            if(ones < LOW_THRESHOLD && state == HIGH) 
-            begin
-                state <= LOW;
-                neg_edge <= 1;
-            end else 
-            begin
-                neg_edge <= 0;
-            end
-            trigger <= 1;
-        end else
-        begin
-            if(trigger)
-            begin
-                trigger <= 0;
+                if(trigger)
+                begin
+                    trigger <= 0;
+                end
             end
         end
     end

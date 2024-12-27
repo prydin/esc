@@ -36,6 +36,7 @@ module zero_detect_sim();
     ) zero_detect (
         .clk(clk),
         .reset(0),
+        .enable(1),
         .in(sense),
         .pos_edge(pos_edge),
         .neg_edge(neg_edge));
