@@ -43,7 +43,7 @@ module zero_detect_sim();
     initial 
     begin
         sense <= 0;
-        #4; // Let things settle
+        #40; // Let things settle
       
         // Positive zero crossing from UNDEFINED
         for (i = 0; i < 130; i = i + 1) 
@@ -69,6 +69,10 @@ module zero_detect_sim();
 		end
 		
 		sense <= 0;
- 
+		#400;
+		
+        sense <= 1;
+		#400;
+		
     end
 endmodule

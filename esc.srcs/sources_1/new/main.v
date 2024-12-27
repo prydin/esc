@@ -74,12 +74,12 @@ module esc(
         .reset(0),               // TODO: Implement reset
         .locked(locked),
         .clk_in1(clk));
-        
+        /*
     // Generate a 100kHz clock based on the 10MHz slow_clk
     clock_divider #(
-        DIVISOR(100)) clock_divider (
+        .DIVISOR(10)) clock_divider (
         .clk_in(slow_clk),
-        .clk_out(sense_clock));
+        .clk_out(sense_clk)); */
         
     // ADC for the speed knob
     xadc_0 speed_knob (
@@ -144,11 +144,12 @@ module esc(
     
     // Test of zero crossing detection. Move to esc pulse generator
     zero_detect #(
-        .WINDOW_SIZE(20),
-        .THRESHOLD(14)) (
-        .clk(sample_clk),
+        .WINDOW_SIZE(200),
+        .THRESHOLD(150)) zero_detect (
+        .clk(slow_clk),
+        .reset(0), // TODO: Add reset logic
         .in(u_zero),
-        .out(u_zero_cleaned)); 
+        .pos_edge(u_zero_cleaned)); 
 
 endmodule
 
@@ -162,7 +163,7 @@ module clock_divider #(
     always @(posedge clk_in) 
     begin
         counter <= counter + 1;
-        if(counter == DIVISOR) 
+        if(counter == DIVISOR / 2) 
         begin
             clk_out <= ~clk_out;
             counter = 0;
@@ -175,6 +176,7 @@ module zero_detect #(
     parameter WINDOW_SIZE = 60, 
     parameter THRESHOLD = 40) (
     input clk,
+    input reset,
     input in,
     output reg pos_edge = 0,
     output reg neg_edge = 0);
@@ -187,43 +189,69 @@ module zero_detect #(
     reg state = LOW;
     reg [WINDOW_SIZE - 1:0] fifo = 0; 
     reg [COUNTER_SIZE:0] ones = 0;
+    reg [COUNTER_SIZE:0] head = 0;
+    reg sampled_in = 0;
+    wire at_end =  head == WINDOW_SIZE - 1;
+    wire [COUNTER_SIZE:0] tail = at_end ? 0 : head + 1;
     wire [COUNTER_SIZE:0] zeroes = WINDOW_SIZE - ones;
     
     // Determine increment/decrement action depending on incoming and outgoing bit
-    wire do_increment = in == 1 && fifo[WINDOW_SIZE - 1:WINDOW_SIZE - 1] == 0;
-    wire do_decrement = in == 0 && fifo[WINDOW_SIZE - 1:WINDOW_SIZE - 1] == 1; 
-       
+    wire do_increment = sampled_in == 1 && fifo[tail] == 0;
+    wire do_decrement = sampled_in == 0 && fifo[tail] == 1;
+        
     always @(posedge clk) 
     begin
-        // Apply effect of incoming bit
-        fifo <= (fifo << 1) | in;
-        if(do_increment)
+    
+        if(reset) 
         begin
-            ones <= ones + 1;
-        end else if(do_decrement)
+            state <= 0;
+            fifo <= 0;
+            ones <= 0;
+            head <= 0;
+        end else 
         begin
-            ones <= ones - 1;
-        end
-        
-        if(state == HIGH)
-        begin
-            pos_edge <= 0;
+            // Sample the input so we have a stable copy of it
+            sampled_in <= in;
             
-            // Negative crossing?
-            if(zeroes >= THRESHOLD)
+            // Move head pointer of the ring buffer
+            if(at_end) 
             begin
-                state <= LOW;
-                neg_edge <= 1;
+                head <= 0;
+            end else
+            begin
+                head <= head + 1;
             end
-        end else
-        begin
-            neg_edge <= 0;
             
-            // Positive crossing?
-            if(ones >= THRESHOLD)
+            // Apply the incoming sense bit
+            fifo[head] <= sampled_in;
+            if(do_increment)
             begin
-                state <= HIGH;
-                pos_edge <= 1;
+                ones <= ones + 1;
+            end else if(do_decrement)
+            begin
+                ones <= ones - 1;
+            end
+            
+            if(state == HIGH)
+            begin
+                pos_edge <= 0;
+                
+                // Negative crossing?
+                if(zeroes >= THRESHOLD)
+                begin
+                    state <= LOW;
+                    neg_edge <= 1;
+                end
+            end else
+            begin
+                neg_edge <= 0;
+                
+                // Positive crossing?
+                if(ones >= THRESHOLD)
+                begin
+                    state <= HIGH;
+                    pos_edge <= 1;
+                end
             end
         end
     end
