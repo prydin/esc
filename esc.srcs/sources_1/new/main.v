@@ -145,7 +145,8 @@ module esc(
     // Test of zero crossing detection. Move to esc pulse generator
     zero_detect #(
         .WINDOW_SIZE(200),
-        .THRESHOLD(150)) zero_detect (
+        .HIGH_THRESHOLD(150),
+        .LOW_THRESHOLD(100)) zero_detect (
         .clk(slow_clk),
         .reset(0), // TODO: Add reset logic
         .in(u_zero),
@@ -172,86 +173,108 @@ module clock_divider #(
     
 endmodule
 
+module ones_counter #(
+    parameter PERIOD = 1) (
+    input clk, 
+    input reset,
+    input start,
+    input signal_in,
+    output reg ready,
+    output reg [$clog2(PERIOD):0] count = 0);
+    
+    reg [$clog2(PERIOD):0] period = 0;
+    reg [$clog2(PERIOD):0] internal_count = 0;
+ 
+    always @(posedge clk) 
+    begin
+        if(reset) 
+        begin
+            internal_count <= 0;
+            period <= 0;
+        end else 
+        begin
+            if(start)
+            begin
+                ready <= 0;
+                internal_count <= 0;
+                period <= 0;
+            end
+            if(!ready && signal_in)
+            begin
+                internal_count <= internal_count + 1;
+            end
+            if(period == PERIOD)
+            begin
+                count <= internal_count;
+                ready <= 1;
+            end else
+            begin
+                period <= period + 1;
+            end
+        end
+    end
+endmodule
+
 module zero_detect #(
     parameter WINDOW_SIZE = 60, 
-    parameter THRESHOLD = 40) (
+    parameter HIGH_THRESHOLD = 40,
+    parameter LOW_THRESHOLD = 30) (
     input clk,
     input reset,
     input in,
     output reg pos_edge = 0,
     output reg neg_edge = 0);
     
-//    localparam UNDEFINED = 0;
     localparam LOW = 0;
     localparam HIGH = 1;
     localparam COUNTER_SIZE = $clog2(WINDOW_SIZE);
      
     reg state = LOW;
-    reg [WINDOW_SIZE - 1:0] fifo = 0; 
-    reg [COUNTER_SIZE:0] ones = 0;
-    reg [COUNTER_SIZE:0] head = 0;
-    reg sampled_in = 0;
-    wire at_end =  head == WINDOW_SIZE - 1;
-    wire [COUNTER_SIZE:0] tail = at_end ? 0 : head + 1;
-    wire [COUNTER_SIZE:0] zeroes = WINDOW_SIZE - ones;
-    
-    // Determine increment/decrement action depending on incoming and outgoing bit
-    wire do_increment = sampled_in == 1 && fifo[tail] == 0;
-    wire do_decrement = sampled_in == 0 && fifo[tail] == 1;
-        
+   
+    wire ready;
+    wire [COUNTER_SIZE:0] ones;
+    reg trigger = 1; 
+
+    ones_counter #(
+        .PERIOD(WINDOW_SIZE)) ones_counter (
+        .clk(clk),
+        .reset(reset),
+        .start(trigger),
+        .signal_in(in),
+        .ready(ready),
+        .count(ones));
+            
     always @(posedge clk) 
     begin
-    
         if(reset) 
         begin
-            state <= 0;
-            fifo <= 0;
-            ones <= 0;
-            head <= 0;
-        end else 
-        begin
-            // Sample the input so we have a stable copy of it
-            sampled_in <= in;
-            
-            // Move head pointer of the ring buffer
-            if(at_end) 
+            trigger <= 1;
+        end
+        if(ready) 
+        begin 
+            if(ones > HIGH_THRESHOLD && state == LOW) 
             begin
-                head <= 0;
+                state <= HIGH;
+                pos_edge <= 1;
             end else
-            begin
-                head <= head + 1;
-            end
-            
-            // Apply the incoming sense bit
-            fifo[head] <= sampled_in;
-            if(do_increment)
-            begin
-                ones <= ones + 1;
-            end else if(do_decrement)
-            begin
-                ones <= ones - 1;
-            end
-            
-            if(state == HIGH)
             begin
                 pos_edge <= 0;
-                
-                // Negative crossing?
-                if(zeroes >= THRESHOLD)
-                begin
-                    state <= LOW;
-                    neg_edge <= 1;
-                end
-            end else
+            end
+            
+            if(ones < LOW_THRESHOLD && state == HIGH) 
+            begin
+                state <= LOW;
+                neg_edge <= 1;
+            end else 
             begin
                 neg_edge <= 0;
-                
-                // Positive crossing?
-                if(ones >= THRESHOLD)
-                begin
-                    state <= HIGH;
-                    pos_edge <= 1;
-                end
+            end
+            trigger <= 1;
+        end else
+        begin
+            if(trigger)
+            begin
+                trigger <= 0;
             end
         end
     end

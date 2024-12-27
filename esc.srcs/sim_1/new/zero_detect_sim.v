@@ -31,9 +31,11 @@ module zero_detect_sim();
     
     zero_detect #(
         .WINDOW_SIZE(60),
-        .THRESHOLD(40)
+        .HIGH_THRESHOLD(40),
+        .LOW_THRESHOLD(30)
     ) zero_detect (
         .clk(clk),
+        .reset(0),
         .in(sense),
         .pos_edge(pos_edge),
         .neg_edge(neg_edge));
