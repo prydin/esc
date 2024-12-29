@@ -36,12 +36,14 @@ module esc(
     input vauxn5            // Power control neg
     );
     
+    localparam PWM_PERIOD = 16384; // Must be power of 2
+    
     // Assign friendly names to the pins
     wire u_hi = pio1;  
-    wire u_lo = pio2;
-    wire v_hi = pio3;
-    wire v_lo = pio4;
-    wire w_hi = pio5;
+    wire v_hi = pio2;
+    wire w_hi = pio3;
+    wire u_lo = pio4;
+    wire v_lo = pio5;
     wire w_lo = pio6;
     wire u_zero = pio7;
     wire v_zero = pio8;
@@ -65,7 +67,7 @@ module esc(
     wire user_speed_rdy;
     
     // Pulse generator parameters
-    reg [9:0] duty_cycle;
+    reg [15:0] duty_cycle;
     
     // Create 200MHz and 10MHz clocks
     clk_wiz_0 clock (
@@ -74,12 +76,6 @@ module esc(
         .reset(0),               // TODO: Implement reset
         .locked(locked),
         .clk_in1(clk));
-        /*
-    // Generate a 100kHz clock based on the 10MHz slow_clk
-    clock_divider #(
-        .DIVISOR(10)) clock_divider (
-        .clk_in(slow_clk),
-        .clk_out(sense_clk)); */
         
     // ADC for the speed knob
     xadc_0 speed_knob (
@@ -111,14 +107,15 @@ module esc(
     begin
         if(user_speed_rdy) 
         begin
-            duty_cycle <= user_speed >> 6; // Divde by 64
+            duty_cycle <= user_speed >> (16 - $clog2(PWM_PERIOD));  
         end
     end
         
     // Main pulse generator logic
-    pulse_gen pulse_gen(
+    pulse_gen #(
+        .PWM_PERIOD(PWM_PERIOD)) pulse_gen (
         master_clk, 
-        100000,
+        100_000_000 / 30, // 3600 RPM
         duty_cycle,
         u_hi,
         u_lo,
@@ -307,13 +304,15 @@ module div_by_6(
     assign y = tmp >> 1;
 endmodule
 
-module pwm_carrier(
+module pwm_carrier #(
+    parameter PERIOD = 8192
+    )(
     input clk,
-    input [9:0] t_on,
-    input [9:0] t_off,
+    input [$clog2(PERIOD) - 1:0] t_on,
+    input [$clog2(PERIOD) - 1:0] t_off,
     output reg out = 0);
     
-reg [9:0] counter = 0;
+reg [$clog2(PERIOD) - 1:0] counter = 0;
 
 always @(posedge clk)
 begin    
@@ -324,7 +323,7 @@ begin
         begin 
             counter <= t_off;
             out <= 0;
-        end else begin
+        end else begin  
             out <= 1;
             counter <= t_on;
         end
@@ -333,10 +332,12 @@ end
     
 endmodule
 
-module pulse_gen(
+module pulse_gen #(
+    PWM_PERIOD = 8192
+    ) (
     input clk,
     input [26:0] period,
-    input [9:0] power,
+    input [$clog2(PWM_PERIOD) - 1:0] power,
     output reg u_hi,
     output reg u_lo, 
     output reg v_hi,
@@ -344,13 +345,13 @@ module pulse_gen(
     output reg w_hi,
     output reg w_lo
     );
-     
+         
     reg unsigned [26:0] counter = 0;
     reg unsigned [2:0] step = 0;
     reg [26:0] current_period = 0;  
     wire [26:0] sub_period;
-    wire [9:0] t_on = power;
-    wire [9:0] t_off = 1024 - power;
+    wire [16:0] t_on = power;
+    wire [16:0] t_off = PWM_PERIOD - power;
     wire pwm;
 
     
@@ -358,9 +359,14 @@ module pulse_gen(
     div_by_6 div_by_6(
         current_period,
         sub_period);
-        
+          
     // Set up pwm choppers
-    pwm_carrier pwm_carrier(clk, t_on, t_off, pwm);
+    pwm_carrier  #(
+        .PERIOD(PWM_PERIOD)) pwm_carrier ( 
+        .clk(clk),
+        .t_on(t_on), 
+        .t_off(t_off),
+        .out(pwm));
  
     always @(posedge clk) 
     begin
