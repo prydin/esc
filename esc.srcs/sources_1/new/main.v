@@ -19,6 +19,9 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+// Master clock rate (Hz)
+`define CLK_RATE 100_000_000 
+
 module esc(
     input clk,              // Master clock
     output [0:1] led,
@@ -115,7 +118,7 @@ module esc(
     pulse_gen #(
         .PWM_PERIOD(PWM_PERIOD)) pulse_gen (
         master_clk, 
-        100_000_000 / 30, // 3600 RPM
+        CLK_RATE / 30, // 3600 RPM
         duty_cycle,
         u_hi,
         u_lo,
@@ -152,25 +155,60 @@ module esc(
 
 endmodule
 
-module clock_divider #(
+// Generate a one-clock period tick at an interval determined by DIVISOR
+module tick_generator #(
     DIVISOR = 1) (
-        input clk_in,
-        output reg clk_out);
-    
+        input clk,
+        output reg tick);
+       
     reg [$clog2(DIVISOR) - 1:0] counter = 0;
     
-    always @(posedge clk_in) 
+    always @(posedge clk) 
     begin
-        counter <= counter + 1;
-        if(counter == DIVISOR / 2) 
+        if(counter == DIVISOR) 
         begin
-            clk_out <= ~clk_out;
+            tick <= 1;
             counter = 0;
+        end else
+        begin 
+            tick <= 0;
+            counter <= counter + 1;
         end
     end
-    
 endmodule
 
+module starter #(
+    RAMPUP_TIME = 10_000_000) (
+    input clk,
+    input trigger,
+    input [26:0] target_period,
+    output reg [26:0] period);
+    
+    localparam START_PERIOD = `CLK_RATE / 5;
+    
+    reg active = 0;
+    reg [26:0] counter = 0;
+    
+    always @(posedge clk) 
+    begin
+        if(trigger && !active) 
+        begin
+            period <= START_PERIOD;
+            active <= 1;
+        end
+        if(active) 
+        begin
+            if(period > target_period)
+            begin
+                period <= period + 1;
+            end else
+            begin
+                active <= 0;
+            end 
+        end 
+    end
+endmodule
+    
 module ones_counter #(
     parameter PERIOD = 1) (
     input clk, 
@@ -338,6 +376,7 @@ module pulse_gen #(
     input clk,
     input [26:0] period,
     input [$clog2(PWM_PERIOD) - 1:0] power,
+    input start,
     output reg u_hi,
     output reg u_lo, 
     output reg v_hi,
@@ -349,10 +388,16 @@ module pulse_gen #(
     reg unsigned [26:0] counter = 0;
     reg unsigned [2:0] step = 0;
     reg [26:0] current_period = 0;  
+    reg [26:0] rampup_period = 0;
     wire [26:0] sub_period;
     wire [16:0] t_on = power;
     wire [16:0] t_off = PWM_PERIOD - power;
     wire pwm;
+    reg [1:0] motor_state = MODE_STARTING;
+    
+    localparam MODE_STARTING    = 0; // Motor is starting
+    localparam MODE_ACCEL       = 1; // Motor is accelerating
+    localparam MODE_RUNNING     = 2; // Motor is running
 
     
     // Calculate length of sub-perdiod
