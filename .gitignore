@@ -5,3 +5,6 @@
 /esc.sim
 /esc.gen
 /esc.ip_user_files
+*.lck
+kicad/esc/fp-info-cache
+*.kicad_sch-bak

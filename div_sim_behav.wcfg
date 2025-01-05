@@ -3,58 +3,89 @@
    <wave_state>
    </wave_state>
    <db_ref_list>
-      <db_ref path="zero_detect_sim_behav.wdb" id="1">
+      <db_ref path="esc_sim_behav.wdb" id="1">
          <top_modules>
+            <top_module name="esc_sim" />
             <top_module name="glbl" />
-            <top_module name="zero_detect_sim" />
          </top_modules>
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="30.700 ns"></ZoomStartTime>
-      <ZoomEndTime time="275.022 ns"></ZoomEndTime>
+      <ZoomStartTime time="0.000 ns"></ZoomStartTime>
+      <ZoomEndTime time="85.451 ns"></ZoomEndTime>
       <Cursor1Time time="1,000.000 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="160"></NameColumnWidth>
+      <NameColumnWidth column_width="124"></NameColumnWidth>
       <ValueColumnWidth column_width="58"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="9" />
-   <wvobject fp_name="/zero_detect_sim/clk" type="logic">
+   <WVObjectSize size="17" />
+   <wvobject fp_name="/esc_sim/clk" type="logic">
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/sense" type="logic">
-      <obj_property name="ElementShortName">sense</obj_property>
-      <obj_property name="ObjectShortName">sense</obj_property>
+   <wvobject fp_name="/esc_sim/u_hi" type="logic">
+      <obj_property name="ElementShortName">u_hi</obj_property>
+      <obj_property name="ObjectShortName">u_hi</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/ones" type="array">
-      <obj_property name="ElementShortName">ones[6:0]</obj_property>
-      <obj_property name="ObjectShortName">ones[6:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   <wvobject fp_name="/esc_sim/u_lo" type="logic">
+      <obj_property name="ElementShortName">u_lo</obj_property>
+      <obj_property name="ObjectShortName">u_lo</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/state" type="logic">
-      <obj_property name="ElementShortName">state</obj_property>
-      <obj_property name="ObjectShortName">state</obj_property>
+   <wvobject fp_name="/esc_sim/v_hi" type="logic">
+      <obj_property name="ElementShortName">v_hi</obj_property>
+      <obj_property name="ObjectShortName">v_hi</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/pos_edge" type="logic">
-      <obj_property name="ElementShortName">pos_edge</obj_property>
-      <obj_property name="ObjectShortName">pos_edge</obj_property>
+   <wvobject fp_name="/esc_sim/v_lo" type="logic">
+      <obj_property name="ElementShortName">v_lo</obj_property>
+      <obj_property name="ObjectShortName">v_lo</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/neg_edge" type="logic">
-      <obj_property name="ElementShortName">neg_edge</obj_property>
-      <obj_property name="ObjectShortName">neg_edge</obj_property>
+   <wvobject fp_name="/esc_sim/w_hi" type="logic">
+      <obj_property name="ElementShortName">w_hi</obj_property>
+      <obj_property name="ObjectShortName">w_hi</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/trigger" type="logic">
-      <obj_property name="ElementShortName">trigger</obj_property>
-      <obj_property name="ObjectShortName">trigger</obj_property>
+   <wvobject fp_name="/esc_sim/w_lo" type="logic">
+      <obj_property name="ElementShortName">w_lo</obj_property>
+      <obj_property name="ObjectShortName">w_lo</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/ones_counter/ready" type="logic">
-      <obj_property name="ElementShortName">ready</obj_property>
-      <obj_property name="ObjectShortName">ready</obj_property>
+   <wvobject fp_name="/esc_sim/start" type="logic">
+      <obj_property name="ElementShortName">start</obj_property>
+      <obj_property name="ObjectShortName">start</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/ones_counter/signal_in" type="logic">
-      <obj_property name="ElementShortName">signal_in</obj_property>
-      <obj_property name="ObjectShortName">signal_in</obj_property>
+   <wvobject fp_name="/esc_sim/pulse_gen/starter/active" type="logic">
+      <obj_property name="ElementShortName">active</obj_property>
+      <obj_property name="ObjectShortName">active</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/starter/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/starter/period" type="array">
+      <obj_property name="ElementShortName">period[26:0]</obj_property>
+      <obj_property name="ObjectShortName">period[26:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/step" type="array">
+      <obj_property name="ElementShortName">step[2:0]</obj_property>
+      <obj_property name="ObjectShortName">step[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/pwm" type="logic">
+      <obj_property name="ElementShortName">pwm</obj_property>
+      <obj_property name="ObjectShortName">pwm</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/pwm_carrier/counter" type="array">
+      <obj_property name="ElementShortName">counter[6:0]</obj_property>
+      <obj_property name="ObjectShortName">counter[6:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/starter/target_period" type="array">
+      <obj_property name="ElementShortName">target_period[26:0]</obj_property>
+      <obj_property name="ObjectShortName">target_period[26:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/current_period" type="array">
+      <obj_property name="ElementShortName">current_period[26:0]</obj_property>
+      <obj_property name="ObjectShortName">current_period[26:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/starter_enabled" type="logic">
+      <obj_property name="ElementShortName">starter_enabled</obj_property>
+      <obj_property name="ObjectShortName">starter_enabled</obj_property>
    </wvobject>
 </wave_config>

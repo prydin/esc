@@ -5,10 +5,10 @@
 
 ## 12 MHz System Clock
 set_property -dict {PACKAGE_PIN M9 IOSTANDARD LVCMOS33} [get_ports clk]
-  create_clock -period 83.330 -name sys_clk_pin -waveform {0.000 41.660} [get_ports clk]
+create_clock -period 83.330 -name clk -waveform {0.000 41.660} [get_ports clk]
 
 ## Push Buttons
-#set_property -dict {PACKAGE_PIN D2 IOSTANDARD LVCMOS33} [get_ports {btn[0]}]
+set_property -dict {PACKAGE_PIN D2 IOSTANDARD LVCMOS33} [get_ports {btn[0]}]
 #set_property -dict {PACKAGE_PIN D1 IOSTANDARD LVCMOS33} [get_ports {btn[1]}]
 
 ## RGB LEDs

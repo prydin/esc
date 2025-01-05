@@ -36,7 +36,8 @@ module esc(
     input pio9,             // W zero sense
     output pio16,           // Cleaned U sense (for debug)
     input vauxp5,           // Power control pos
-    input vauxn5            // Power control neg
+    input vauxn5,           // Power control neg
+    input [1:0]btn          // Started button (to be removed in final design)            
     );
     
     localparam PWM_PERIOD = 16384; // Must be power of 2
@@ -52,6 +53,7 @@ module esc(
     wire v_zero = pio8;
     wire w_zero = pio9;
     wire u_zero_cleaned = pio16; // For debug
+    wire start = btn[0];
     
     // Master 200MHz clock
     wire master_clk;
@@ -117,15 +119,18 @@ module esc(
     // Main pulse generator logic
     pulse_gen #(
         .PWM_PERIOD(PWM_PERIOD)) pulse_gen (
-        master_clk, 
-        CLK_RATE / 30, // 3600 RPM
-        duty_cycle,
-        u_hi,
-        u_lo,
-        v_hi,
-        v_lo,
-        w_hi,
-        w_lo);
+        .clk(master_clk), 
+        .start(start),
+        .period(`CLK_RATE / 30), 
+        .start_period(`CLK_RATE / 5),
+        .idle_period(`CLK_RATE / 30),
+        .power(duty_cycle),
+        .u_hi(u_hi),
+        .u_lo(u_lo),
+        .v_hi(v_hi),
+        .v_lo(v_lo),
+        .w_hi(w_hi),
+        .w_lo(w_lo));
         
     // Test/demo code
     reg [31:0] blink_count;
@@ -177,30 +182,32 @@ module tick_generator #(
     end
 endmodule
 
-module starter #(
-    RAMPUP_TIME = 10_000_000) (
+////////////////////////////////////////////////////////////////////////
+// starter
+// Ramps up RPM in open loop mode until we can detect back EMF
+////////////////////////////////////////////////////////////////////////
+module starter (
     input clk,
     input trigger,
+    input [26:0] start_period,
     input [26:0] target_period,
-    output reg [26:0] period);
-    
-    localparam START_PERIOD = `CLK_RATE / 5;
-    
-    reg active = 0;
+    output reg [26:0] period,
+    output reg active = 0);
+        
     reg [26:0] counter = 0;
     
     always @(posedge clk) 
     begin
         if(trigger && !active) 
         begin
-            period <= START_PERIOD;
+            period <= start_period;
             active <= 1;
         end
         if(active) 
         begin
             if(period > target_period)
             begin
-                period <= period + 1;
+                period <= period - 1;
             end else
             begin
                 active <= 0;
@@ -208,7 +215,11 @@ module starter #(
         end 
     end
 endmodule
-    
+
+////////////////////////////////////////////////////////////////////////
+// ones_counter
+// Counts the number of "ones" sampled from an incoming signal
+////////////////////////////////////////////////////////////////////////    
 module ones_counter #(
     parameter PERIOD = 1) (
     input clk, 
@@ -253,6 +264,11 @@ module ones_counter #(
     end
 endmodule
 
+
+/////////////////////////////////////////////////////////////////////
+// zero_detect
+// Detects a back EMF zero crossing
+/////////////////////////////////////////////////////////////////////
 module zero_detect #(
     parameter WINDOW_SIZE = 60, 
     parameter HIGH_THRESHOLD = 40,
@@ -324,16 +340,16 @@ module zero_detect #(
 endmodule
 
 module div_by_3(
-    input unsigned [26:0] x,
-    output unsigned [26:0] y);
+    input [26:0] x,
+    output [26:0] y);
    
     // Power series approximation of x / 3
     assign y = (x >> 1) - (x >> 2) + (x >> 3) - (x >> 4) + (x >> 5) - (x >> 6) + (x >> 7) - (x >> 8) + (x >> 9) - (x >> 10); 
 endmodule
 
 module div_by_6(
-    input unsigned [26:0] x,
-    output unsigned [26:0] y);
+    input [26:0] x,
+    output [26:0] y);
     
     wire [26:0] tmp;
     div_by_3 div_by_3(
@@ -342,6 +358,11 @@ module div_by_6(
     assign y = tmp >> 1;
 endmodule
 
+
+////////////////////////////////////////////////////////////////////////////
+// pwm_carrier
+// Generates the PWM chopping frequency based on an on-time and and off-time
+////////////////////////////////////////////////////////////////////////////
 module pwm_carrier #(
     parameter PERIOD = 8192
     )(
@@ -370,11 +391,17 @@ end
     
 endmodule
 
+//////////////////////////////////////
+// pulse_gen
+// Main commutation generator logic
+//////////////////////////////////////
 module pulse_gen #(
     PWM_PERIOD = 8192
     ) (
     input clk,
     input [26:0] period,
+    input [26:0] start_period, 
+    input [26:0] idle_period,
     input [$clog2(PWM_PERIOD) - 1:0] power,
     input start,
     output reg u_hi,
@@ -385,20 +412,15 @@ module pulse_gen #(
     output reg w_lo
     );
          
-    reg unsigned [26:0] counter = 0;
-    reg unsigned [2:0] step = 0;
+    reg [26:0] counter = 0;
+    reg [2:0] step = 0;
     reg [26:0] current_period = 0;  
-    reg [26:0] rampup_period = 0;
+    wire [26:0] starter_period;
+    wire starter_enabled;
     wire [26:0] sub_period;
     wire [16:0] t_on = power;
     wire [16:0] t_off = PWM_PERIOD - power;
     wire pwm;
-    reg [1:0] motor_state = MODE_STARTING;
-    
-    localparam MODE_STARTING    = 0; // Motor is starting
-    localparam MODE_ACCEL       = 1; // Motor is accelerating
-    localparam MODE_RUNNING     = 2; // Motor is running
-
     
     // Calculate length of sub-perdiod
     div_by_6 div_by_6(
@@ -412,6 +434,15 @@ module pulse_gen #(
         .t_on(t_on), 
         .t_off(t_off),
         .out(pwm));
+        
+    // Set up the starter
+    starter starter (
+        .clk(clk),
+        .trigger(start),
+        .start_period(start_period), 
+        .target_period(idle_period),
+        .period(starter_period),
+        .active(starter_enabled));
  
     always @(posedge clk) 
     begin
@@ -420,8 +451,15 @@ module pulse_gen #(
         begin
             if(step == 0) 
             begin 
-                // Make any period changes take effect at the start of the first step
-                current_period <= period;
+                // Make any period changes take effect at the start of the first step.
+                // Use the period for the starter if it's enabled.
+                if(starter_enabled)
+                begin
+                    current_period <= starter_period;
+                end else
+                begin
+                    current_period <= period;
+                end
             end   
             if(step == 5)
             begin 
@@ -429,8 +467,6 @@ module pulse_gen #(
             end else begin 
                 step <= step + 1;
             end
-            
-            
         end
         case(step) 
             0: begin
