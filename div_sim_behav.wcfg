@@ -12,14 +12,14 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0.000 ns"></ZoomStartTime>
-      <ZoomEndTime time="85.451 ns"></ZoomEndTime>
-      <Cursor1Time time="1,000.000 ns"></Cursor1Time>
+      <ZoomEndTime time="109.792 ns"></ZoomEndTime>
+      <Cursor1Time time="13.000 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="124"></NameColumnWidth>
+      <NameColumnWidth column_width="116"></NameColumnWidth>
       <ValueColumnWidth column_width="58"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="17" />
+   <WVObjectSize size="19" />
    <wvobject fp_name="/esc_sim/clk" type="logic">
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
@@ -72,10 +72,6 @@
       <obj_property name="ElementShortName">pwm</obj_property>
       <obj_property name="ObjectShortName">pwm</obj_property>
    </wvobject>
-   <wvobject fp_name="/esc_sim/pulse_gen/pwm_carrier/counter" type="array">
-      <obj_property name="ElementShortName">counter[6:0]</obj_property>
-      <obj_property name="ObjectShortName">counter[6:0]</obj_property>
-   </wvobject>
    <wvobject fp_name="/esc_sim/pulse_gen/starter/target_period" type="array">
       <obj_property name="ElementShortName">target_period[26:0]</obj_property>
       <obj_property name="ObjectShortName">target_period[26:0]</obj_property>
@@ -87,5 +83,17 @@
    <wvobject fp_name="/esc_sim/pulse_gen/starter_enabled" type="logic">
       <obj_property name="ElementShortName">starter_enabled</obj_property>
       <obj_property name="ObjectShortName">starter_enabled</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/starter/sub_counter" type="array">
+      <obj_property name="ElementShortName">sub_counter[3:0]</obj_property>
+      <obj_property name="ObjectShortName">sub_counter[3:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/start" type="logic">
+      <obj_property name="ElementShortName">start</obj_property>
+      <obj_property name="ObjectShortName">start</obj_property>
+   </wvobject>
+   <wvobject fp_name="/esc_sim/pulse_gen/starter/period" type="array">
+      <obj_property name="ElementShortName">period[26:0]</obj_property>
+      <obj_property name="ObjectShortName">period[26:0]</obj_property>
    </wvobject>
 </wave_config>

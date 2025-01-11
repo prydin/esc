@@ -34,7 +34,8 @@ module esc(
     input pio7,             // U zero sense
     input pio8,             // V zero sense
     input pio9,             // W zero sense
-    output pio16,           // Cleaned U sense (for debug)
+    output pio16,           // Cleaned U pos sense (for debug)
+    output pio17,           // Cleaned U neg sense (for debug)
     input vauxp5,           // Power control pos
     input vauxn5,           // Power control neg
     input [1:0]btn          // Started button (to be removed in final design)            
@@ -52,7 +53,8 @@ module esc(
     wire u_zero = pio7;
     wire v_zero = pio8;
     wire w_zero = pio9;
-    wire u_zero_cleaned = pio16; // For debug
+    wire u_zero_pos;
+    wire u_zero_neg;
     wire start = btn[0];
     
     // Master 200MHz clock
@@ -148,16 +150,63 @@ module esc(
     end 
     
     // Test of zero crossing detection. Move to esc pulse generator
+    localparam ZD_WINDOW = 400;
+    localparam ZD_PERCENT = 90;
+    
     zero_detect #(
-        .WINDOW_SIZE(200),
-        .HIGH_THRESHOLD(150),
-        .LOW_THRESHOLD(100)) zero_detect (
+        .WINDOW_SIZE(ZD_WINDOW),
+        .HIGH_THRESHOLD((ZD_WINDOW * ZD_PERCENT) / 100),
+        .LOW_THRESHOLD((ZD_WINDOW * (100 - ZD_PERCENT)) / 100)) zero_detect (
         .clk(slow_clk),
         .enable(1),
         .reset(0), // TODO: Add reset logic
         .in(u_zero),
-        .pos_edge(u_zero_cleaned)); 
+        .pos_edge(u_zero_pos),
+        .neg_edge(u_zero_neg));
+        
+    mono_ff #(.PULSE_LENGTH(300)) u_pos_ff (
+        .clk(slow_clk),
+        .trigger(u_zero_pos),
+        .out(pio16));
+        
+    mono_ff #(.PULSE_LENGTH(300)) u_neg_ff (
+        .clk(slow_clk),
+        .trigger(u_zero_neg),
+        .out(pio17));
+endmodule
 
+//////////////////////////////////////////////////////////
+// mono_ff 
+// Monostable flip-flop. Currently used only for debugging
+//////////////////////////////////////////////////////////
+module mono_ff #(
+    PULSE_LENGTH = 1000) (
+    input clk, 
+    input trigger,
+    output reg out = 0);
+    
+    reg [$clog2(PULSE_LENGTH):0] counter = 0;
+    
+    always @(posedge clk) 
+    begin
+        if(out)
+        begin
+            begin
+                if(counter == 0) 
+                begin
+                   out <= 0; 
+                end else 
+                begin
+                    counter <= counter - 1;
+                end
+            end
+        end 
+        if(trigger && !out)
+        begin
+            out <= 1; 
+            counter <= PULSE_LENGTH;            
+        end     
+    end
 endmodule
 
 // Generate a one-clock period tick at an interval determined by DIVISOR
@@ -186,7 +235,9 @@ endmodule
 // starter
 // Ramps up RPM in open loop mode until we can detect back EMF
 ////////////////////////////////////////////////////////////////////////
-module starter (
+module starter #(
+    DIVISOR = 5
+    ) (
     input clk,
     input trigger,
     input [26:0] start_period,
@@ -194,7 +245,7 @@ module starter (
     output reg [26:0] period,
     output reg active = 0);
         
-    reg [26:0] counter = 0;
+    reg [$clog2(DIVISOR):0] sub_counter= 0;
     
     always @(posedge clk) 
     begin
@@ -205,14 +256,21 @@ module starter (
         end
         if(active) 
         begin
-            if(period > target_period)
+            if(sub_counter == 0) 
             begin
-                period <= period - 1;
+                sub_counter <= DIVISOR;
+                if(period > target_period)
+                begin
+                    period <= period - 1;
+                end else
+                begin
+                    active <= 0;
+                end 
             end else
             begin
-                active <= 0;
-            end 
-        end 
+                sub_counter <= sub_counter - 1;
+            end
+        end
     end
 endmodule
 

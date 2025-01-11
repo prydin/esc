@@ -3183,12 +3183,6 @@
 		(uuid "b0e7bb5a-0a2d-4afb-af95-322db1dda0ed")
 	)
 	(junction
-		(at 247.65 36.83)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "b29e317d-db61-4a75-b5ca-a05ae085ce47")
-	)
-	(junction
 		(at 125.73 17.78)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -4948,16 +4942,6 @@
 	)
 	(wire
 		(pts
-			(xy 247.65 36.83) (xy 252.73 36.83)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5592180e-2c6b-473a-85bb-24a43c74a752")
-	)
-	(wire
-		(pts
 			(xy 278.13 125.73) (xy 278.13 128.27)
 		)
 		(stroke
@@ -5055,16 +5039,6 @@
 			(type default)
 		)
 		(uuid "5ae083c1-1beb-4943-9677-f2b723761bdd")
-	)
-	(wire
-		(pts
-			(xy 246.38 36.83) (xy 247.65 36.83)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5ae0e335-478f-4ec5-85c7-73e91974c759")
 	)
 	(wire
 		(pts
@@ -5975,6 +5949,16 @@
 			(type default)
 		)
 		(uuid "9b202bd0-8ce2-4578-8581-bd4399245e5b")
+	)
+	(wire
+		(pts
+			(xy 247.65 36.83) (xy 252.73 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9b595162-e22e-4d7b-92b7-479a6518afde")
 	)
 	(wire
 		(pts
@@ -6925,16 +6909,6 @@
 			(type default)
 		)
 		(uuid "dce7add4-f00f-43d7-aeef-7585afb66637")
-	)
-	(wire
-		(pts
-			(xy 40.64 167.64) (xy 40.64 168.91)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dd214de9-b460-4b63-ade0-2264a7361c4e")
 	)
 	(wire
 		(pts
@@ -15719,22 +15693,22 @@
 			(uuid "e4560728-6341-4201-bc18-fb8dfe6efd60")
 		)
 		(pin "6"
-			(uuid "7448602a-22cd-42ab-b490-d4d46825d13f")
+			(uuid "7448602a-22cd-42ab-b490-d4d46825d140")
 		)
 		(pin "4"
-			(uuid "3e769e2b-295a-47fd-8b2e-a1e796ff43ec")
+			(uuid "3e769e2b-295a-47fd-8b2e-a1e796ff43ed")
 		)
 		(pin "7"
-			(uuid "d550c3d7-7ea3-42d4-8144-8737fbd8a659")
+			(uuid "d550c3d7-7ea3-42d4-8144-8737fbd8a65a")
 		)
 		(pin "8"
-			(uuid "42c8d597-0115-4060-8825-b4f8e84d1d3a")
+			(uuid "42c8d597-0115-4060-8825-b4f8e84d1d3b")
 		)
 		(pin "3"
 			(uuid "8e2ac119-6af4-4ef0-85e9-8902b793b0c0")
 		)
 		(pin "5"
-			(uuid "57d672ea-cacc-4ebd-8e59-db2864c994de")
+			(uuid "57d672ea-cacc-4ebd-8e59-db2864c994df")
 		)
 		(instances
 			(project "esc"
