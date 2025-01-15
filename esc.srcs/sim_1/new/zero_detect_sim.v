@@ -29,6 +29,16 @@ module zero_detect_sim();
     
     reg sense;
     
+    wire [15:0] smoothed = 0;
+    
+    exp_smoother #(
+        .ALPHA(10)) smoother (
+        .clk(clk),
+        .in(sense),
+        .enable(1),
+        .reset(0),
+        .out(smoothed)); 
+    
     zero_detect #(
         .WINDOW_SIZE(60),
         .HIGH_THRESHOLD(40),

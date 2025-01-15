@@ -53,8 +53,6 @@ module esc(
     wire u_zero = pio7;
     wire v_zero = pio8;
     wire w_zero = pio9;
-    wire u_zero_pos;
-    wire u_zero_neg;
     wire start = btn[0];
     
     // Master 200MHz clock
@@ -150,13 +148,23 @@ module esc(
     end 
     
     // Test of zero crossing detection. Move to esc pulse generator
-    localparam ZD_WINDOW = 400;
-    localparam ZD_PERCENT = 90;
+    localparam ZD_WINDOW = 400; // Number of 10MHz ticks to look across
+    localparam ZD_PERCENT = 90; // Percentage of ones to trigger a zero crossing
+    
+    localparam ZD_ON_TIME = (ZD_WINDOW * ZD_PERCENT) / 100;
+    localparam ZD_OFF_TIME = (ZD_WINDOW * (100 - ZD_PERCENT)) / 100;
+    
+    wire u_zero_pos;
+    wire u_zero_neg;
+    wire v_zero_pos;
+    wire v_zero_neg;
+    wire w_zero_pos;
+    wire w_zero_neg;
     
     zero_detect #(
         .WINDOW_SIZE(ZD_WINDOW),
-        .HIGH_THRESHOLD((ZD_WINDOW * ZD_PERCENT) / 100),
-        .LOW_THRESHOLD((ZD_WINDOW * (100 - ZD_PERCENT)) / 100)) zero_detect (
+        .HIGH_THRESHOLD(ZD_ON_TIME),
+        .LOW_THRESHOLD(ZD_OFF_TIME)) zero_detect_u (
         .clk(slow_clk),
         .enable(1),
         .reset(0), // TODO: Add reset logic
@@ -173,6 +181,49 @@ module esc(
         .clk(slow_clk),
         .trigger(u_zero_neg),
         .out(pio17));
+        
+    zero_detect #(
+        .WINDOW_SIZE(ZD_WINDOW),
+        .HIGH_THRESHOLD(ZD_ON_TIME),
+        .LOW_THRESHOLD(ZD_OFF_TIME)) zero_detect_v (
+        .clk(slow_clk),
+        .enable(1),
+        .reset(0), // TODO: Add reset logic
+        .in(v_zero),
+        .pos_edge(v_zero_pos),
+        .neg_edge(v_zero_neg));
+        
+    mono_ff #(.PULSE_LENGTH(300)) v_pos_ff (
+        .clk(slow_clk),
+        .trigger(v_zero_pos),
+        .out(pio18));
+        
+    mono_ff #(.PULSE_LENGTH(300)) v_neg_ff (
+        .clk(slow_clk),
+        .trigger(v_zero_neg),
+        .out(pio19));
+        
+    zero_detect #(
+        .WINDOW_SIZE(ZD_WINDOW),
+        .HIGH_THRESHOLD(ZD_ON_TIME),
+        .LOW_THRESHOLD(ZD_OFF_TIME)) zero_detect_W (
+        .clk(slow_clk),
+        .enable(1),
+        .reset(0), // TODO: Add reset logic
+        .in(w_zero),
+        .pos_edge(w_zero_pos),
+        .neg_edge(w_zero_neg));
+        
+    mono_ff #(.PULSE_LENGTH(300)) w_pos_ff (
+        .clk(slow_clk),
+        .trigger(w_zero_pos),
+        .out(pio20));
+        
+    mono_ff #(.PULSE_LENGTH(300)) w_neg_ff (
+        .clk(slow_clk),
+        .trigger(w_zero_neg),
+        .out(pio21));        
+        
 endmodule
 
 //////////////////////////////////////////////////////////
@@ -322,12 +373,87 @@ module ones_counter #(
     end
 endmodule
 
+module exp_smoother #(
+    parameter NUM_BITS  = 16,
+    parameter ALPHA     = 100) (
+        input clk,
+        input reset,
+        input enable,
+        input in,
+        output reg [NUM_BITS - 1:0] out = 0);
+        
+    localparam MAX_VALUE        = 2 ** NUM_BITS;
+    localparam SCALED_ALPHA     = MAX_VALUE / ALPHA;
+    localparam SCALED_ALPHA_1   = MAX_VALUE - SCALED_ALPHA;
+     
+    wire [NUM_BITS * 2 - 1:0]   lag_term = out * SCALED_ALPHA_1;
+    wire [NUM_BITS - 1:0]       acc = (lag_term >> NUM_BITS) + (in ? SCALED_ALPHA : 0);  
+     
+    always @(posedge clk)
+    begin
+        out <= acc;  
+    end         
+endmodule 
+
+
+module zero_detect #(
+    parameter WINDOW_SIZE       = 60, 
+    parameter HIGH_THRESHOLD    = 40,
+    parameter LOW_THRESHOLD     = 30) (
+    input clk,
+    input reset,
+    input enable, 
+    input in,
+    output reg pos_edge = 0,
+    output reg neg_edge = 0);
+    
+    reg [WINDOW_SIZE - 1:0]     buffer = 0;
+    reg [$clog2(WINDOW_SIZE):0] ones_counter = 0;
+    reg new_bit = 0;
+    
+    always @(posedge clk)
+    begin
+        new_bit <= in;
+        if(ones_counter > HIGH_THRESHOLD)
+        begin
+            ones_counter <= 0;
+            buffer <= 0;
+            pos_edge <= 1;
+        end else begin
+            pos_edge <= 0;
+            
+            // A one is shifted in and a zero is shifted out -> net is +1.
+            if(in && !buffer[0])
+            begin
+                ones_counter <= ones_counter + 1;
+            end else
+            begin
+                // A zero is shifted in an a one is shifted out -> net is -1.
+                if(!in && buffer[0])
+                begin
+                    ones_counter <= ones_counter - 1;
+                end
+            end
+        end
+    end
+    
+    integer i;
+    always @(negedge clk) 
+    begin
+        for(i = 0; i < WINDOW_SIZE - 1; i = i + 1) 
+        begin
+            buffer[i] <= buffer[i + 1];
+        end
+        buffer[WINDOW_SIZE - 1] <= new_bit;
+    end
+endmodule
+
 
 /////////////////////////////////////////////////////////////////////
 // zero_detect
 // Detects a back EMF zero crossing
 /////////////////////////////////////////////////////////////////////
-module zero_detect #(
+module zero_detect_old #(
     parameter WINDOW_SIZE = 60, 
     parameter HIGH_THRESHOLD = 40,
     parameter LOW_THRESHOLD = 30) (
