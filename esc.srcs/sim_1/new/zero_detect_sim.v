@@ -31,8 +31,8 @@ module zero_detect_sim();
     
     wire [15:0] smoothed = 0;
     
-    exp_smoother #(
-        .ALPHA(10)) smoother (
+    filter #(
+        .WINDOW_SIZE(10)) filter_sim (
         .clk(clk),
         .in(sense),
         .enable(1),
@@ -40,9 +40,9 @@ module zero_detect_sim();
         .out(smoothed)); 
     
     zero_detect #(
-        .WINDOW_SIZE(60),
-        .HIGH_THRESHOLD(40),
-        .LOW_THRESHOLD(30)
+        .WINDOW_SIZE(10),
+        .HIGH_THRESHOLD(65536 * 0.63),
+        .LOW_THRESHOLD(65536 * 0.37)
     ) zero_detect (
         .clk(clk),
         .reset(0),

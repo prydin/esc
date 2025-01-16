@@ -148,12 +148,9 @@ module esc(
     end 
     
     // Test of zero crossing detection. Move to esc pulse generator
-    localparam ZD_WINDOW = 400; // Number of 10MHz ticks to look across
-    localparam ZD_PERCENT = 90; // Percentage of ones to trigger a zero crossing
-    
-    localparam ZD_ON_TIME = (ZD_WINDOW * ZD_PERCENT) / 100;
-    localparam ZD_OFF_TIME = (ZD_WINDOW * (100 - ZD_PERCENT)) / 100;
-    
+    localparam ZD_WINDOW = 200; // Number of 10MHz ticks to look across
+    localparam ZD_PERCENT = 80; // Percentage of ones to trigger a zero crossing
+        
     wire u_zero_pos;
     wire u_zero_neg;
     wire v_zero_pos;
@@ -163,8 +160,8 @@ module esc(
     
     zero_detect #(
         .WINDOW_SIZE(ZD_WINDOW),
-        .HIGH_THRESHOLD(ZD_ON_TIME),
-        .LOW_THRESHOLD(ZD_OFF_TIME)) zero_detect_u (
+        .HIGH_THRESHOLD(ZD_PERCENT),
+        .LOW_THRESHOLD(100 - ZD_PERCENT)) zero_detect_u (
         .clk(slow_clk),
         .enable(1),
         .reset(0), // TODO: Add reset logic
@@ -184,8 +181,8 @@ module esc(
         
     zero_detect #(
         .WINDOW_SIZE(ZD_WINDOW),
-        .HIGH_THRESHOLD(ZD_ON_TIME),
-        .LOW_THRESHOLD(ZD_OFF_TIME)) zero_detect_v (
+        .HIGH_THRESHOLD(ZD_PERCENT),
+        .LOW_THRESHOLD(100 - ZD_PERCENT)) zero_detect_v (
         .clk(slow_clk),
         .enable(1),
         .reset(0), // TODO: Add reset logic
@@ -205,8 +202,8 @@ module esc(
         
     zero_detect #(
         .WINDOW_SIZE(ZD_WINDOW),
-        .HIGH_THRESHOLD(ZD_ON_TIME),
-        .LOW_THRESHOLD(ZD_OFF_TIME)) zero_detect_W (
+        .HIGH_THRESHOLD(ZD_PERCENT),
+        .LOW_THRESHOLD(100 - ZD_PERCENT)) zero_detect_W (
         .clk(slow_clk),
         .enable(1),
         .reset(0), // TODO: Add reset logic
@@ -373,17 +370,17 @@ module ones_counter #(
     end
 endmodule
 
-module exp_smoother #(
-    parameter NUM_BITS  = 16,
-    parameter ALPHA     = 100) (
-        input clk,
-        input reset,
-        input enable,
-        input in,
-        output reg [NUM_BITS - 1:0] out = 0);
+module filter #(
+    parameter                   NUM_BITS    = 16,
+    parameter                   WINDOW_SIZE = 100) (
+    input                       clk,
+    input                       reset,
+    input                       enable,
+    input                       in,
+    output reg [NUM_BITS - 1:0] out = 0);
         
     localparam MAX_VALUE        = 2 ** NUM_BITS;
-    localparam SCALED_ALPHA     = MAX_VALUE / ALPHA;
+    localparam SCALED_ALPHA     = MAX_VALUE / WINDOW_SIZE;
     localparam SCALED_ALPHA_1   = MAX_VALUE - SCALED_ALPHA;
      
     wire [NUM_BITS * 2 - 1:0]   lag_term = out * SCALED_ALPHA_1;
@@ -391,60 +388,67 @@ module exp_smoother #(
      
     always @(posedge clk)
     begin
-        out <= acc;  
+        if(reset)
+        begin
+            out <= 0;
+        end else
+        begin
+            out <= acc;
+        end  
     end         
 endmodule 
 
 
 module zero_detect #(
-    parameter WINDOW_SIZE       = 60, 
-    parameter HIGH_THRESHOLD    = 40,
-    parameter LOW_THRESHOLD     = 30) (
-    input clk,
-    input reset,
-    input enable, 
-    input in,
-    output reg pos_edge = 0,
-    output reg neg_edge = 0);
+    parameter   WINDOW_SIZE       = 100, 
+    parameter   HIGH_THRESHOLD    = 80,
+    parameter   LOW_THRESHOLD     = 20) (
+    input       clk,
+    input       reset,
+    input       enable, 
+    input       in,
+    output reg  pos_edge = 0,
+    output reg  neg_edge = 0);
     
-    reg [WINDOW_SIZE - 1:0]     buffer = 0;
-    reg [$clog2(WINDOW_SIZE):0] ones_counter = 0;
-    reg new_bit = 0;
+    localparam FILTER_BITS = 16;
+    localparam MAX_VALUE = (2 ** FILTER_BITS) - 1;
+    localparam RAW_HI = (MAX_VALUE * HIGH_THRESHOLD) / 100;
+    localparam RAW_LO = (MAX_VALUE * LOW_THRESHOLD) / 100;  
     
-    always @(posedge clk)
+    wire [FILTER_BITS - 1:0] filter_out;
+    
+    filter #(
+      .NUM_BITS(FILTER_BITS),
+      .WINDOW_SIZE(WINDOW_SIZE)) filter (
+      .clk(clk),
+      .enable(enable),
+      .reset(reset),
+      .in(in),
+      .out(filter_out));
+      
+    reg state = 0;
+      
+    always @(posedge clk) 
     begin
-        new_bit <= in;
-        if(ones_counter > HIGH_THRESHOLD)
+        if(enable)
         begin
-            ones_counter <= 0;
-            buffer <= 0;
-            pos_edge <= 1;
-        end else begin
-            pos_edge <= 0;
-            
-            // A one is shifted in and a zero is shifted out -> net is +1.
-            if(in && !buffer[0])
+            if(filter_out > RAW_HI && !state)
             begin
-                ones_counter <= ones_counter + 1;
+                state <= 1;
+                pos_edge <= 1;
+            end else 
+            begin
+                pos_edge <= 0;
+            end
+            if(filter_out < RAW_LO && state)
+            begin
+                state <= 0;
+                neg_edge <= 1;
             end else
             begin
-                // A zero is shifted in an a one is shifted out -> net is -1.
-                if(!in && buffer[0])
-                begin
-                    ones_counter <= ones_counter - 1;
-                end
+                neg_edge <= 0;
             end
         end
-    end
-    
-    integer i;
-    always @(negedge clk) 
-    begin
-        for(i = 0; i < WINDOW_SIZE - 1; i = i + 1) 
-        begin
-            buffer[i] <= buffer[i + 1];
-        end
-        buffer[WINDOW_SIZE - 1] <= new_bit;
     end
 endmodule
 

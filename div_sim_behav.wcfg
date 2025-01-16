@@ -12,47 +12,43 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0.000 ns"></ZoomStartTime>
-      <ZoomEndTime time="140.892 ns"></ZoomEndTime>
-      <Cursor1Time time="696.436 ns"></Cursor1Time>
+      <ZoomEndTime time="1,000.001 ns"></ZoomEndTime>
+      <Cursor1Time time="85.996 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="108"></NameColumnWidth>
+      <NameColumnWidth column_width="92"></NameColumnWidth>
       <ValueColumnWidth column_width="58"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="9" />
-   <wvobject fp_name="/zero_detect_sim/zero_detect/pos_edge" type="logic">
-      <obj_property name="ElementShortName">pos_edge</obj_property>
-      <obj_property name="ObjectShortName">pos_edge</obj_property>
-   </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/buffer" type="array">
-      <obj_property name="ElementShortName">buffer[59:0]</obj_property>
-      <obj_property name="ObjectShortName">buffer[59:0]</obj_property>
-   </wvobject>
+   <WVObjectSize size="8" />
    <wvobject fp_name="/zero_detect_sim/zero_detect/clk" type="logic">
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
-   </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/ones_counter" type="array">
-      <obj_property name="ElementShortName">ones_counter[6:0]</obj_property>
-      <obj_property name="ObjectShortName">ones_counter[6:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/new_bit" type="logic">
-      <obj_property name="ElementShortName">new_bit</obj_property>
-      <obj_property name="ObjectShortName">new_bit</obj_property>
-   </wvobject>
-   <wvobject fp_name="/zero_detect_sim/zero_detect/i" type="array">
-      <obj_property name="ElementShortName">i[31:0]</obj_property>
-      <obj_property name="ObjectShortName">i[31:0]</obj_property>
    </wvobject>
    <wvobject fp_name="/zero_detect_sim/zero_detect/in" type="logic">
       <obj_property name="ElementShortName">in</obj_property>
       <obj_property name="ObjectShortName">in</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/smoother/out" type="array">
-      <obj_property name="ElementShortName">out[3:0]</obj_property>
-      <obj_property name="ObjectShortName">out[3:0]</obj_property>
+   <wvobject fp_name="/zero_detect_sim/zero_detect/state" type="logic">
+      <obj_property name="ElementShortName">state</obj_property>
+      <obj_property name="ObjectShortName">state</obj_property>
    </wvobject>
-   <wvobject fp_name="/zero_detect_sim/smoother/acc" type="array">
+   <wvobject fp_name="/zero_detect_sim/zero_detect/pos_edge" type="logic">
+      <obj_property name="ElementShortName">pos_edge</obj_property>
+      <obj_property name="ObjectShortName">pos_edge</obj_property>
+   </wvobject>
+   <wvobject fp_name="/zero_detect_sim/zero_detect/neg_edge" type="logic">
+      <obj_property name="ElementShortName">neg_edge</obj_property>
+      <obj_property name="ObjectShortName">neg_edge</obj_property>
+   </wvobject>
+   <wvobject fp_name="/zero_detect_sim/smoothed" type="array">
+      <obj_property name="ElementShortName">smoothed[15:0]</obj_property>
+      <obj_property name="ObjectShortName">smoothed[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/zero_detect_sim/zero_detect/filter/lag_term" type="array">
+      <obj_property name="ElementShortName">lag_term[31:0]</obj_property>
+      <obj_property name="ObjectShortName">lag_term[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/zero_detect_sim/zero_detect/filter/acc" type="array">
       <obj_property name="ElementShortName">acc[15:0]</obj_property>
       <obj_property name="ObjectShortName">acc[15:0]</obj_property>
       <obj_property name="WaveformStyle">STYLE_ANALOG</obj_property>
