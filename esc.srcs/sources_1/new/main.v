@@ -322,54 +322,11 @@ module starter #(
     end
 endmodule
 
-////////////////////////////////////////////////////////////////////////
-// ones_counter
-// Counts the number of "ones" sampled from an incoming signal
-////////////////////////////////////////////////////////////////////////    
-module ones_counter #(
-    parameter PERIOD = 1) (
-    input clk, 
-    input reset,
-    input enable,
-    input start,
-    input signal_in,
-    output reg ready,
-    output reg [$clog2(PERIOD):0] count = 0);
-    
-    reg [$clog2(PERIOD):0] period = 0;
-    reg [$clog2(PERIOD):0] internal_count = 0;
- 
-    always @(posedge clk) 
-    begin
-        if(reset || !enable) 
-        begin
-            internal_count <= 0;
-            period <= 0;
-            ready <= 0;
-        end else 
-        begin
-            if(start)
-            begin
-                ready <= 0;
-                internal_count <= 0;
-                period <= 0;
-            end
-            if(!ready && signal_in)
-            begin
-                internal_count <= internal_count + 1;
-            end
-            if(period == PERIOD)
-            begin
-                count <= internal_count;
-                ready <= 1;
-            end else
-            begin
-                period <= period + 1;
-            end
-        end
-    end
-endmodule
-
+///////////////////////////////////////////////////////////////
+// filter 
+// A simple first-order IIR filter for cleaning up the polarity
+// pulses coming out of the the analog comparators
+///////////////////////////////////////////////////////////////
 module filter #(
     parameter                   NUM_BITS    = 16,
     parameter                   WINDOW_SIZE = 100) (
@@ -399,6 +356,10 @@ module filter #(
 endmodule 
 
 
+/////////////////////////////////////////////////////////////////////
+// zero_detect
+// Detects a back EMF zero crossing
+/////////////////////////////////////////////////////////////////////
 module zero_detect #(
     parameter   WINDOW_SIZE       = 100, 
     parameter   HIGH_THRESHOLD    = 80,
@@ -410,10 +371,10 @@ module zero_detect #(
     output reg  pos_edge = 0,
     output reg  neg_edge = 0);
     
-    localparam FILTER_BITS = 16;
-    localparam MAX_VALUE = (2 ** FILTER_BITS) - 1;
-    localparam RAW_HI = (MAX_VALUE * HIGH_THRESHOLD) / 100;
-    localparam RAW_LO = (MAX_VALUE * LOW_THRESHOLD) / 100;  
+    localparam FILTER_BITS  = 16;
+    localparam MAX_VALUE    = (2 ** FILTER_BITS) - 1;
+    localparam RAW_HI       = (MAX_VALUE * HIGH_THRESHOLD) / 100;
+    localparam RAW_LO       = (MAX_VALUE * LOW_THRESHOLD) / 100;  
     
     wire [FILTER_BITS - 1:0] filter_out;
     
@@ -447,81 +408,6 @@ module zero_detect #(
             end else
             begin
                 neg_edge <= 0;
-            end
-        end
-    end
-endmodule
-
-
-/////////////////////////////////////////////////////////////////////
-// zero_detect
-// Detects a back EMF zero crossing
-/////////////////////////////////////////////////////////////////////
-module zero_detect_old #(
-    parameter WINDOW_SIZE = 60, 
-    parameter HIGH_THRESHOLD = 40,
-    parameter LOW_THRESHOLD = 30) (
-    input clk,
-    input reset,
-    input enable, 
-    input in,
-    output reg pos_edge = 0,
-    output reg neg_edge = 0);
-    
-    localparam LOW = 0;
-    localparam HIGH = 1;
-    localparam COUNTER_SIZE = $clog2(WINDOW_SIZE);
-     
-    reg state = LOW;
-   
-    wire ready;
-    wire [COUNTER_SIZE:0] ones;
-    reg trigger = 1; 
-
-    ones_counter #(
-        .PERIOD(WINDOW_SIZE)) ones_counter (
-        .clk(clk),
-        .reset(reset),
-        .enable(enable),
-        .start(trigger),
-        .signal_in(in),
-        .ready(ready),
-        .count(ones));
-            
-    always @(posedge clk) 
-    begin
-        if(reset) 
-        begin
-            trigger <= 1;
-        end
-        if(enable) 
-        begin
-            if(ready) 
-            begin 
-                if(ones > HIGH_THRESHOLD && state == LOW) 
-                begin
-                    state <= HIGH;
-                    pos_edge <= 1;
-                end else
-                begin
-                    pos_edge <= 0;
-                end
-                
-                if(ones < LOW_THRESHOLD && state == HIGH) 
-                begin
-                    state <= LOW;
-                    neg_edge <= 1;
-                end else 
-                begin
-                    neg_edge <= 0;
-                end
-                trigger <= 1;
-            end else
-            begin
-                if(trigger)
-                begin
-                    trigger <= 0;
-                end
             end
         end
     end
